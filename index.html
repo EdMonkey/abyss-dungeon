@@ -157,8 +157,10 @@
   <div class="controls">
     <b>WASD</b> 이동 · <b>Shift</b> 질주 · <b>Space</b> 점프 · <b>마우스</b> 시점<br>
     <b>좌클릭</b> 공격 (활: 누르고 있다가 놓기) · <b>우클릭</b> 막기 / 조준<br>
-    <b>E</b> 상호작용 · <b>Tab</b> 인벤토리 · <b>1 2 3</b> 무기 교체 · <b>C</b> 특수 공격 · <b>Q</b> 물약 · <b>F</b> 붕대 · <b>M</b> 음소거<br><br>
+    <b>E</b> 상호작용 · <b>Tab</b> 인벤토리 · <b>1 2 3</b> 무기 교체 · <b>C</b> 특수 공격 · <b>Q</b> 물약 · <b>F</b> 붕대 · <b>M</b> 음소거<br>
+    <b>T</b> 횃불 들기/넣기 · <b>R</b> 횃불로 때리기 (적에게 불을 붙인다) · <b>G</b> 횃불 던지기 (어둠을 밝힌다)<br><br>
     어둠 속에서 보물을 찾고, 층의 수호자를 쓰러뜨리거나 룬 퍼즐을 풀어 더 깊이 내려가라.<br>
+    횃불 없이는 한 치 앞도 보이지 않는다. 한 손엔 무기, 한 손엔 횃불 — 단, 활은 두 손이 필요하다.<br>
     시작 방 근처의 상인에게서 장비를 사고팔 수 있다. 무기마다 고유한 특수 공격이 있다.<br>
     죽음은 영원하다. 얼마나 깊이 내려갈 수 있는가?
   </div>
@@ -393,7 +395,8 @@ function rollLoot(n,luck){
   if(r<48) return makeArmor(choice(['head','chest','legs']),rollRarity(n+luck));
   if(r<62) return {type:'potion'};
   if(r<72) return {type:'bandage'};
-  if(r<86) return {type:'arrows',amt:irand(4,8)};
+  if(r<82) return {type:'arrows',amt:irand(4,8)};
+  if(r<90) return {type:'torch',amt:irand(1,2)};
   return {type:'gold',amt:irand(8,22)*n};
 }
 function itemName(it){
@@ -402,6 +405,7 @@ function itemName(it){
   if(it.type==='potion')return '치유 물약';
   if(it.type==='bandage')return '붕대';
   if(it.type==='arrows')return '화살 ×'+it.amt;
+  if(it.type==='torch')return '횃불 ×'+it.amt;
   if(it.type==='gold')return '골드 '+it.amt;
   return '?';
 }
@@ -410,6 +414,7 @@ function itemColor(it){
   if(it.type==='potion')return '#e05555';
   if(it.type==='bandage')return '#ddd';
   if(it.type==='arrows')return '#c8a060';
+  if(it.type==='torch')return '#ff9040';
   return '#ffd24a';
 }
 
@@ -420,7 +425,7 @@ let state='menu'; // menu|play|inv|paused|dead|fade
 function freshPlayer(){
   return {x:0,z:0,y:0,vy:0,onGround:true,
     hp:100,maxhp:100,st:100,maxst:100,stDelay:0,
-    gold:0,potions:0,bandages:1,arrows:0,
+    gold:0,potions:0,bandages:1,arrows:0,torches:2,torchHeld:false,
     bag:[],weapons:[makeWeapon('dagger',0),null,null],wi:0,
     armor:{head:null,chest:null,legs:null},
     hots:[],blocking:false,guardBroken:0,dead:false};
@@ -522,6 +527,7 @@ function los(ax,az,bx,bz){
 let enemies=[],projectiles=[],grounds=[],chests=[],telegraphs=[],fxList=[],torches=[];
 let boss=null,gateOpen=false,puzzle=null,barrierMesh=null,stairsObj=null;
 let merchant=null,shopStock=null,spCd=0,spState=null,beatAcc=0,beatN=0;
+let torchSwing={active:false,t:0,dur:0.55,hitDone:false},groundTorches=[];
 function clearWorld(){
   worldG.traverse(o=>{
     if(o.geometry)o.geometry.dispose();
@@ -534,7 +540,7 @@ function clearWorld(){
   worldG=new THREE.Group();scene.add(worldG);
   enemies=[];projectiles=[];grounds=[];chests=[];telegraphs=[];fxList=[];torches=[];
   boss=null;gateOpen=false;puzzle=null;barrierMesh=null;stairsObj=null;
-  merchant=null;shopStock=null;
+  merchant=null;shopStock=null;groundTorches=[];
 }
 function buildWorld(d){
   const theme=THEMES[(d.n-1)%THEMES.length];
@@ -858,6 +864,94 @@ function meleeHit(mult,arcOver,rangeMult){
   if(hitAny)sfx('hit');
   return hitAny;
 }
+/* ---------- 횃불 (왼손): T 들기 · R 타격 · G 던지기 ---------- */
+function toggleTorch(){
+  if(state!=='play')return;
+  if(player.torchHeld){
+    player.torchHeld=false;
+    addLog('횃불을 집어넣었다','#998');
+  }else{
+    if(curW().kind==='bow'){addLog('활은 두 손이 필요하다','#f88');return;}
+    if(player.torches<=0){addLog('횃불이 없다','#f88');return;}
+    player.torchHeld=true;
+    addLog('횃불을 들었다','#fc8');
+  }
+  sfx('equip');
+}
+function enforceTwoHand(){
+  if(curW().kind==='bow'&&player.torchHeld){
+    player.torchHeld=false;
+    addLog('활을 들기 위해 횃불을 집어넣었다','#fc8');
+  }
+}
+function igniteEnemy(e){
+  e.burnT=3;e.burnRate=3;
+  floatText(e.x,e.h+0.5,e.z,'🔥','#ff9040',0.9);
+}
+function tryTorchHit(){
+  if(state!=='play'||!player.torchHeld||torchSwing.active||player.guardBroken>0)return;
+  if(player.st<6){addLog('지쳐서 휘두를 수 없다','#fa0');return;}
+  player.st-=6;player.stDelay=0.8;
+  torchSwing={active:true,t:0,dur:0.55,hitDone:false};
+  sfx('swing');
+  alertEnemies(8);
+}
+function torchHitCheck(){
+  const f=new THREE.Vector3();camera.getWorldDirection(f);
+  const fl=Math.hypot(f.x,f.z)||1,nfx=f.x/fl,nfz=f.z/fl;
+  let hit=false;
+  for(const e of enemies){
+    if(e.deadT!==undefined)continue;
+    const dx=e.x-player.x,dz=e.z-player.z,d=Math.hypot(dx,dz);
+    if(d>1.9+e.r)continue;
+    const ang=Math.acos(clamp((dx*nfx+dz*nfz)/(d||0.001),-1,1))*180/Math.PI;
+    if(ang>43)continue;
+    if(!los(player.x,player.z,e.x,e.z))continue;
+    damageEnemy(e,9*rand(0.9,1.15),false);
+    igniteEnemy(e);
+    hit=true;
+  }
+  if(hit)sfx('hit');
+}
+function throwTorch(){
+  if(state!=='play'||!player.torchHeld||torchSwing.active)return;
+  player.torches--;
+  if(player.torches<=0){player.torches=0;player.torchHeld=false;}
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+  const grp=new THREE.Group();
+  const stick=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.45,0.05),new THREE.MeshLambertMaterial({color:0x6a4a2a}));
+  grp.add(stick);
+  const fls=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffa040,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  fls.position.y=0.28;fls.scale.set(0.5,0.5,1);grp.add(fls);
+  grp.add(new THREE.PointLight(0xff9040,1.0,9,1.7));
+  const px=player.x+dir.x*0.5,py=1.5+player.y+dir.y*0.5,pz=player.z+dir.z*0.5;
+  grp.position.set(px,py,pz);worldG.add(grp);
+  projectiles.push({x:px,y:py,z:pz,vx:dir.x*11,vy:dir.y*11+2.6,vz:dir.z*11,
+    grav:9,mesh:grp,fromPlayer:true,torch:true,dmg:15,life:5});
+  sfx('swing');
+  addLog('횃불을 던졌다','#fc8');
+}
+function plantTorch(x,z){
+  if(solid(x,z)){
+    let ok=false;
+    for(let a=0;a<8;a++){
+      const tx=x+Math.sin(a*0.785)*0.7,tz=z+Math.cos(a*0.785)*0.7;
+      if(!solid(tx,tz)){x=tx;z=tz;ok=true;break;}
+    }
+    if(!ok)return;
+  }
+  if(groundTorches.length>=5){const o=groundTorches.shift();worldG.remove(o.grp);}
+  const grp=new THREE.Group();
+  const stick=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.5,0.05),new THREE.MeshLambertMaterial({color:0x6a4a2a}));
+  stick.position.y=0.22;stick.rotation.z=0.25;grp.add(stick);
+  const fls=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffa040,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  fls.position.set(0.1,0.52,0);fls.scale.set(0.6,0.6,1);grp.add(fls);
+  const li=new THREE.PointLight(0xff9040,1.15,11,1.7);
+  li.position.y=0.6;grp.add(li);
+  grp.position.set(x,0,z);worldG.add(grp);
+  groundTorches.push({grp:grp,li:li,sp:fls,t:rand(0,9),life:90});
+}
+
 /* ---------- 무기별 특수 공격 (C) ---------- */
 function trySpecial(){
   if(state!=='play'||spState||atk.active||bowSt.drawing||player.blocking||player.guardBroken>0)return;
@@ -974,7 +1068,8 @@ function killEnemy(e){
     if(r<0.10)dropGround({type:'arrows',amt:irand(3,6)},e.x,e.z);
     else if(r<0.18)dropGround({type:'bandage'},e.x,e.z);
     else if(r<0.23)dropGround({type:'potion'},e.x,e.z);
-    else if(r<0.45)dropGround({type:'gold',amt:irand(4,12)*floorNum},e.x,e.z);
+    else if(r<0.30)dropGround({type:'torch',amt:1},e.x,e.z);
+    else if(r<0.50)dropGround({type:'gold',amt:irand(4,12)*floorNum},e.x,e.z);
   }
 }
 function alertEnemies(r,x,z){
@@ -1031,10 +1126,21 @@ function updateEnemies(dt){
       continue;
     }
     e.animT+=dt;
+    // 화상 도트 피해
+    if(e.burnT>0){
+      e.burnT-=dt;
+      e.hp-=e.burnRate*dt;
+      e.burnTick=(e.burnTick||0)+dt;
+      if(e.burnTick>=1){e.burnTick-=1;floatText(e.x,e.h+0.2,e.z,''+Math.round(e.burnRate),'#ff9040',0.75);}
+      if(e.hp<=0){killEnemy(e);continue;}
+    }
     if(e.flashT>0){
       e.flashT-=dt;
       const k=Math.max(0,e.flashT/0.13)*0.85;
       for(const m of e.vis.mats)m.emissive.setRGB(k,k*0.85,k*0.7);
+    }else{
+      const b=e.burnT>0?0.32:0;
+      for(const m of e.vis.mats)m.emissive.setRGB(b,b*0.35,0);
     }
     const dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz);
     let moving=false;
@@ -1222,7 +1328,8 @@ function updateProjectiles(dt){
     p.vy-=p.grav*dt;
     p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
     p.mesh.position.set(p.x,p.y,p.z);
-    if(p.grav>0)p.mesh.lookAt(p.x+p.vx,p.y+p.vy,p.z+p.vz);
+    if(p.torch)p.mesh.rotation.x+=dt*9;
+    else if(p.grav>0)p.mesh.lookAt(p.x+p.vx,p.y+p.vy,p.z+p.vz);
     let dead=p.life<=0||p.y<0.03||p.y>WALL_H;
     if(!dead&&solid(p.x,p.z))dead=true;
     if(!dead){
@@ -1231,8 +1338,14 @@ function updateProjectiles(dt){
           if(e.deadT!==undefined)continue;
           const dd=Math.hypot(e.x-p.x,e.z-p.z);
           if(dd<e.r+0.25&&p.y>0&&p.y<e.h){
-            const head=p.y>e.h*0.72;
-            damageEnemy(e,p.dmg*(head?1.6:1),head);
+            if(p.torch){
+              damageEnemy(e,p.dmg,false);
+              igniteEnemy(e);
+              plantTorch(e.x,e.z);
+            }else{
+              const head=p.y>e.h*0.72;
+              damageEnemy(e,p.dmg*(head?1.6:1),head);
+            }
             sfx('hit');
             p.consumed=true;dead=true;break;
           }
@@ -1246,7 +1359,8 @@ function updateProjectiles(dt){
       }
     }
     if(dead){
-      if(p.fromPlayer&&!p.consumed&&p.y>=0.03&&p.life>0){p.stuck=0;continue;} // 벽에 박힘
+      if(p.torch&&!p.consumed)plantTorch(p.x-p.vx*dt,p.z-p.vz*dt); // 떨어진 자리에 불이 붙는다
+      if(p.fromPlayer&&!p.torch&&!p.consumed&&p.y>=0.03&&p.life>0){p.stuck=0;continue;} // 벽에 박힘
       worldG.remove(p.mesh);projectiles.splice(i,1);
     }
   }
@@ -1314,6 +1428,16 @@ function updateFx(dt){
     t.li.intensity=t.base*k;
     t.sp.scale.set(0.7*k,0.7*k,1);
   }
+  // 바닥에 던져진 횃불 (수명 + 깜빡임)
+  for(let i=groundTorches.length-1;i>=0;i--){
+    const g=groundTorches[i];
+    g.t+=dt;g.life-=dt;
+    const k=0.85+Math.sin(g.t*12)*0.12+Math.sin(g.t*25)*0.07;
+    const fade=Math.min(1,g.life/5);
+    g.li.intensity=1.15*k*fade;
+    g.sp.scale.set(0.6*k*fade,0.6*k*fade,1);
+    if(g.life<=0){worldG.remove(g.grp);groundTorches.splice(i,1);}
+  }
   if(barrierMesh&&!gateOpen)barrierMesh.material.opacity=0.28+0.12*Math.sin(performance.now()*0.004);
 }
 
@@ -1378,6 +1502,7 @@ function pickupGround(g){
   const it=g.item;
   if(it.type==='gold'){player.gold+=it.amt;sfx('gold');}
   else if(it.type==='arrows'){player.arrows+=it.amt;sfx('pickup');}
+  else if(it.type==='torch'){player.torches+=it.amt;sfx('pickup');}
   else if(it.type==='potion'){player.potions++;sfx('pickup');}
   else if(it.type==='bandage'){player.bandages++;sfx('pickup');}
   else{
@@ -1466,6 +1591,36 @@ function updateViewWeapon(dt){
   viewW.rotation.set(lerp(viewW.rotation.x,rx,dt*14),lerp(viewW.rotation.y,ry,dt*14),lerp(viewW.rotation.z,rz,dt*14));
 }
 
+/* ============================== 왼손 횃불 뷰모델 ============================== */
+const viewT=new THREE.Group();camera.add(viewT);
+let viewTFlame=null;
+(function buildViewTorch(){
+  const stick=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.52,0.05),new THREE.MeshLambertMaterial({color:0x6a4a2a}));
+  stick.position.y=0.05;viewT.add(stick);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.14,0.1),
+    new THREE.MeshLambertMaterial({color:0x33231a,emissive:0xcc5500,emissiveIntensity:0.9}));
+  head.position.y=0.36;viewT.add(head);
+  viewTFlame=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffa040,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  viewTFlame.position.y=0.5;viewTFlame.scale.set(0.34,0.34,1);viewT.add(viewTFlame);
+  viewT.visible=false;
+})();
+function updateViewTorch(dt){
+  viewT.visible=!!(player&&player.torchHeld);
+  if(!viewT.visible)return;
+  let px=-0.42,py=-0.46,pz=-0.6,rx=-0.15,rz=0.2;
+  if(torchSwing.active){
+    const p=torchSwing.t/torchSwing.dur;
+    if(p<0.3){const k=p/0.3;rz+=k*0.7;rx-=k*0.3;px-=k*0.12;}
+    else if(p<0.55){const k=(p-0.3)/0.25;rz+=0.7-1.9*k;rx+=-0.3+0.9*k;px+=-0.12+0.42*k;pz-=0.22*k;}
+    else{const k=1-(p-0.55)/0.45;rz+=-1.2*k;rx+=0.6*k;px+=0.3*k;pz-=0.22*k;}
+  }
+  py+=Math.sin(walkT*2+0.9)*0.012;
+  viewT.position.set(lerp(viewT.position.x,px,dt*14),lerp(viewT.position.y,py,dt*14),lerp(viewT.position.z,pz,dt*14));
+  viewT.rotation.set(lerp(viewT.rotation.x,rx,dt*14),0,lerp(viewT.rotation.z,rz,dt*14));
+  const fl=0.3+Math.sin(performance.now()*0.02)*0.05+Math.random()*0.04;
+  viewTFlame.scale.set(fl,fl,1);
+}
+
 /* ============================== 플레이어 업데이트 ============================== */
 const keys={};
 function updatePlayer(dt){
@@ -1518,6 +1673,13 @@ function updatePlayer(dt){
     if(p>=1)atk.active=false;
   }
   if(bowSt.drawing)bowSt.t+=dt;
+  // 횃불 휘두르기
+  if(torchSwing.active){
+    torchSwing.t+=dt;
+    const tp=torchSwing.t/torchSwing.dur;
+    if(tp>=0.38&&!torchSwing.hitDone){torchSwing.hitDone=true;torchHitCheck();}
+    if(tp>=1)torchSwing.active=false;
+  }
   // 카메라
   bobY=movin&&player.onGround?Math.abs(Math.sin(walkT))*0.045:lerp(bobY,0,dt*8);
   let sx=0,sy=0;
@@ -1608,7 +1770,9 @@ function updateHUD(){
   $('stFill').style.width=(player.st/player.maxst*100)+'%';
   $('hpText').textContent=Math.ceil(player.hp)+' / '+player.maxhp;
   $('buffs').textContent=player.hots.length?'✚ 회복 중...':'';
-  $('consums').innerHTML='🧪 물약 <b>'+player.potions+'</b> (Q)<br>🩹 붕대 <b>'+player.bandages+'</b> (F)<br>➶ 화살 <b>'+player.arrows+'</b><br>💰 '+player.gold+
+  $('consums').innerHTML='🧪 물약 <b>'+player.potions+'</b> (Q)<br>🩹 붕대 <b>'+player.bandages+'</b> (F)<br>'+
+    '🔥 횃불 <b'+(player.torchHeld?' style="color:#ffa040"':'')+'>'+player.torches+'</b> (T)<br>'+
+    '➶ 화살 <b>'+player.arrows+'</b><br>💰 '+player.gold+
     '<br>⚡ 특수 (C) '+(spCd>0?'<b>'+Math.ceil(spCd)+'s</b>':'<b style="color:#7fdc7f">준비</b>');
   if(boss&&boss.aggro&&boss.deadT===undefined){
     $('bossBarFill').style.width=(boss.hp/boss.maxhp*100)+'%';
@@ -1675,6 +1839,7 @@ $('inv').addEventListener('click',ev=>{
       player.weapons[slot]=it;
       player.bag=player.bag.filter(x=>x);
       buildViewWeapon();
+      enforceTwoHand();
     }else{
       const prev=player.armor[it.slot];
       player.armor[it.slot]=it;
@@ -1683,7 +1848,7 @@ $('inv').addEventListener('click',ev=>{
     }
     sfx('equip');
   }else if(k==='w'&&player.weapons[i]){
-    player.wi=+i;buildViewWeapon();sfx('equip');
+    player.wi=+i;buildViewWeapon();enforceTwoHand();sfx('equip');
   }
   renderInv();updateHotbar();
 });
@@ -1720,6 +1885,7 @@ function sellPrice(it){return Math.max(3,Math.floor(gearPrice(it)*0.35));}
 function consPrice(t){
   if(t==='potion')return 30+12*floorNum;
   if(t==='bandage')return 15+5*floorNum;
+  if(t==='torch')return 15+5*floorNum;
   return 25+5*floorNum; // arrows ×10
 }
 function spawnMerchant(d){
@@ -1775,6 +1941,7 @@ function renderShop(){
   h+='<div class="shopRow" data-buyc="potion"><span>🧪 치유 물약</span><span class="price">'+consPrice('potion')+' G</span></div>';
   h+='<div class="shopRow" data-buyc="bandage"><span>🩹 붕대</span><span class="price">'+consPrice('bandage')+' G</span></div>';
   h+='<div class="shopRow" data-buyc="arrows"><span>➶ 화살 ×10</span><span class="price">'+consPrice('arrows')+' G</span></div>';
+  h+='<div class="shopRow" data-buyc="torch"><span>🔥 횃불</span><span class="price">'+consPrice('torch')+' G</span></div>';
   $('shopBuy').innerHTML=h;
   $('shopGold').textContent='💰 보유 골드: '+player.gold;
   let b='';
@@ -1802,6 +1969,7 @@ $('shop').addEventListener('click',ev=>{
     player.gold-=p;
     if(t==='potion')player.potions++;
     else if(t==='bandage')player.bandages++;
+    else if(t==='torch')player.torches++;
     else player.arrows+=10;
     sfx('buy');addLog('구매 완료','#ffd24a');
   }else if(r.dataset.sell!==undefined){
@@ -1852,7 +2020,8 @@ const TIPS=['막기는 스태미나를 소모한다. 스태미나가 없으면 �
  '보스의 발밑 붉은 원은 피하라는 뜻이다.','미믹을 조심하라. 너무 좋은 상자는 의심하라.',
  '정예(큰) 몬스터는 반드시 전리품을 떨어뜨린다.','장창은 적이 닿기 전에 먼저 찌를 수 있다.',
  'C 키로 무기마다 다른 특수 공격을 쓸 수 있다.','상인은 시작 방 근처에서 기다린다. 골드를 아끼지 마라.',
- '도끼의 회전 베기는 둘러싸였을 때 빛을 발한다.'];
+ '도끼의 회전 베기는 둘러싸였을 때 빛을 발한다.','횃불이 없으면 시야가 극도로 좁아진다. 항상 여분을 챙겨라.',
+ '횃불을 던져(G) 어두운 방을 미리 밝힐 수 있다.','횃불로 때리면(R) 적이 불타오른다. 활을 쏠 때는 횃불을 들 수 없다.'];
 function die(){
   if(player.dead)return;
   player.dead=true;state='dead';
@@ -1891,9 +2060,12 @@ document.addEventListener('keydown',e=>{
   if(state!=='play')return;
   if(e.code==='KeyE')doInteract();
   if(e.code==='KeyC')trySpecial();
+  if(e.code==='KeyT')toggleTorch();
+  if(e.code==='KeyR')tryTorchHit();
+  if(e.code==='KeyG')throwTorch();
   if(e.code==='Digit1'||e.code==='Digit2'||e.code==='Digit3'){
     const i=+e.code.slice(-1)-1;
-    if(player.weapons[i]){player.wi=i;atk.active=false;bowSt.drawing=false;buildViewWeapon();updateHotbar();sfx('equip');}
+    if(player.weapons[i]){player.wi=i;atk.active=false;bowSt.drawing=false;buildViewWeapon();enforceTwoHand();updateHotbar();sfx('equip');}
   }
   if(e.code==='KeyQ'){
     if(player.potions>0){player.potions--;player.hots.push({rate:11,remain:55});sfx('drink');addLog('치유 물약을 마셨다','#7fdc7f');}
@@ -1968,6 +2140,7 @@ function animate(){
     updateFx(dt);
     updateInteract();
     updateViewWeapon(dt);
+    updateViewTorch(dt);
     updateHUD();
     mmDraw();
     // 상인이 플레이어를 바라봄
@@ -1988,8 +2161,13 @@ function animate(){
         if(beatN%16===14)tone(220,0.5,'sawtooth',0.05,110);
       }
     }else beatAcc=0;
-    // 플레이어 횃불 깜빡임
-    playerLight.intensity=1.45+Math.sin(performance.now()*0.011)*0.1+Math.sin(performance.now()*0.027)*0.06;
+    // 시야 광원: 횃불을 들어야 밝다
+    const held=player.torchHeld;
+    playerLight.color.setHex(held?0xffa050:0x9aa6c0);
+    playerLight.distance=held?17:8;
+    playerLight.intensity=held
+      ?1.7+Math.sin(performance.now()*0.011)*0.12+Math.sin(performance.now()*0.027)*0.07
+      :0.5;
   }
   renderer.render(scene,camera);
 }
