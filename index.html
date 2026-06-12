@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>심연의 던전 — DESCEND</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -94,6 +95,60 @@
   #shopBag { display:grid; grid-template-columns:repeat(5,68px); gap:8px; }
   #shopHint { margin-top:14px; font-size:11px; color:#5a5548; }
   .slot .sellp { font-size:9px; color:#ffd24a; }
+
+  /* ============ 모바일 터치 컨트롤 ============ */
+  canvas { touch-action:none; }
+  #mctl { position:fixed; inset:0; display:none; pointer-events:none; z-index:30; }
+  body.touchmode #mctl { display:block; }
+  .mbtn { position:absolute; pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    background:rgba(12,12,18,.5); border:1.5px solid rgba(200,180,120,.4); border-radius:50%;
+    color:#d8cba0; font-weight:600; text-shadow:0 1px 2px #000; line-height:1.15; text-align:center;
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+  .mbtn:active, .mbtn.on { background:rgba(190,160,80,.4); border-color:rgba(230,200,130,.8); }
+  .mbtn .mico { font-size:18px; }
+  .mbtn .mlab { font-size:10px; color:#b8ae90; }
+  .mbtn .mnum { position:absolute; top:-4px; right:-2px; min-width:18px; height:18px; border-radius:9px; background:#3a3326;
+    border:1px solid #6a5a38; font-size:11px; color:#ffd24a; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+  #mbR    { right:16px;  bottom:86px;  width:84px; height:84px; font-size:13px; }
+  #mbJump { right:30px;  bottom:186px; width:56px; height:56px; }
+  #mbL    { right:114px; bottom:42px;  width:66px; height:66px; font-size:12px; }
+  #mbBlock{ right:118px; bottom:130px; width:60px; height:60px; font-size:12px; }
+  #mbE    { right:198px; bottom:86px;  width:60px; height:60px; }
+  #mbC    { right:196px; bottom:172px; width:52px; height:52px; }
+  #mbT    { left:14px;   top:104px;  width:50px; height:50px; }
+  #mbQ    { left:14px;   top:168px;  width:50px; height:50px; }
+  #mbF    { left:14px;   top:232px;  width:50px; height:50px; }
+  #mbBag  { right:10px;  top:136px;  width:48px; height:48px; }
+  #joyBase { position:absolute; width:116px; height:116px; border-radius:50%; border:2px solid rgba(200,180,120,.3);
+    background:rgba(10,10,16,.3); display:none; pointer-events:none; }
+  #joyKnob { position:absolute; left:50%; top:50%; width:48px; height:48px; margin:-24px 0 0 -24px; border-radius:50%;
+    background:rgba(200,176,110,.45); border:1.5px solid rgba(230,200,130,.7); }
+  .ovClose { display:none; position:absolute; top:8px; right:10px; width:36px; height:36px; border-radius:6px;
+    background:#2a2418; border:1px solid #6a5a38; color:#d8cba0; font-size:18px;
+    align-items:center; justify-content:center; cursor:pointer; }
+  body.touchmode .ovClose { display:flex; }
+  body.touchmode #consums { display:none; }
+  body.touchmode #hotbar { pointer-events:auto; }
+  body.touchmode #minimap { width:110px; height:110px; }
+  body.touchmode #bossWrap { width:300px; }
+  body.touchmode #log { bottom:auto; top:64px; left:74px; font-size:11px; }
+  body.touchmode .barWrap { left:74px; }
+  body.touchmode #hpWrap { width:190px; }
+  body.touchmode #stWrap { width:160px; }
+  body.touchmode #hpText { left:80px; }
+  body.touchmode #buffs { left:74px; }
+  @media (max-width:900px) {
+    .screen h1 { font-size:32px; letter-spacing:3px; }
+    .screen h2 { font-size:12px; letter-spacing:5px; margin-bottom:14px; }
+    .screen .controls { font-size:11px; line-height:1.6; margin-bottom:14px; padding:0 14px; }
+    #bestLabel { margin-top:10px; }
+    #inv, #shop { width:96vw; max-height:94vh; overflow:auto; padding:14px; }
+    #invCols, #shopCols { gap:12px; }
+    #invL { width:200px; } #shopL { width:280px; }
+    .slot { width:56px; height:56px; font-size:11px; }
+    #invBag, #shopBag { grid-template-columns:repeat(5,56px); gap:6px; }
+    .srow { gap:6px; }
+  }
 </style>
 </head>
 <body>
@@ -121,6 +176,7 @@
 </div>
 
 <div id="inv">
+  <div class="ovClose" id="ovCloseInv">✕</div>
   <div id="invCols">
     <div id="invL">
       <h3>장 비</h3>
@@ -136,6 +192,7 @@
   <div id="invHint">좌클릭: 장착 · 우클릭: 바닥에 버리기 · Tab: 닫기</div>
 </div>
 <div id="shop">
+  <div class="ovClose" id="ovCloseShop">✕</div>
   <div id="shopCols">
     <div id="shopL">
       <h3>구 매</h3>
@@ -177,6 +234,21 @@
 </div>
 
 <div id="paused">— 일시정지 · 클릭하여 계속 —</div>
+
+<div id="mctl">
+  <div id="joyBase"><div id="joyKnob"></div></div>
+  <div class="mbtn" id="mbR"><span class="mico">⚔</span><span class="mlab">오른손</span></div>
+  <div class="mbtn" id="mbL"><span class="mico">🤜</span><span class="mlab">왼손</span></div>
+  <div class="mbtn" id="mbBlock"><span class="mico">🛡</span><span class="mlab">막기</span></div>
+  <div class="mbtn" id="mbJump"><span class="mico">⤴</span><span class="mlab">점프</span></div>
+  <div class="mbtn" id="mbE"><span class="mico">✋</span><span class="mlab">잡기</span></div>
+  <div class="mbtn" id="mbC"><span class="mico">⚡</span><span class="mlab">특수</span></div>
+  <div class="mbtn" id="mbT"><span class="mico">🔥</span><span class="mnum" id="mbTn">0</span></div>
+  <div class="mbtn" id="mbQ"><span class="mico">🧪</span><span class="mnum" id="mbQn">0</span></div>
+  <div class="mbtn" id="mbF"><span class="mico">🩹</span><span class="mnum" id="mbFn">0</span></div>
+  <div class="mbtn" id="mbBag"><span class="mico">🎒</span></div>
+</div>
+
 <div id="fade"></div>
 
 <script src="three.min.js"></script>
@@ -1813,13 +1885,14 @@ function updatePlayer(dt){
   let mx=0,mz=0;
   if(keys.KeyW)mz-=1;if(keys.KeyS)mz+=1;
   if(keys.KeyA)mx-=1;if(keys.KeyD)mx+=1;
+  if(joy.id!==null){mx+=joy.x;mz+=joy.z;}
   const movin=mx!==0||mz!==0;
-  const sprinting=keys.ShiftLeft&&movin&&player.st>1&&!player.blocking&&!bowSt.drawing;
+  const sprinting=(keys.ShiftLeft||joy.mag>1.12)&&movin&&player.st>1&&!player.blocking&&!bowSt.drawing;
   let spd=sprinting?6.4:4.1;
   if(player.blocking)spd*=0.55;
   if(bowSt.drawing)spd*=0.6;
   if(movin){
-    const l=Math.hypot(mx,mz);mx/=l;mz/=l;
+    const l=Math.hypot(mx,mz);if(l>1){mx/=l;mz/=l;}
     const s=Math.sin(yaw),c=Math.cos(yaw);
     const wx=mx*c+mz*s,wz=-mx*s+mz*c;
     moveCircle(player,wx*spd*dt,wz*spd*dt,0.35);
@@ -1957,6 +2030,17 @@ function updateHUD(){
     '<br>⚡ 특수 (C) '+(spCd>0?'<b>'+Math.ceil(spCd)+'s</b>':'<b style="color:#7fdc7f">준비</b>');
   if(boss&&boss.aggro&&boss.deadT===undefined){
     $('bossBarFill').style.width=(boss.hp/boss.maxhp*100)+'%';
+  }
+  if(IS_TOUCH){
+    $('mbQn').textContent=player.potions;
+    $('mbFn').textContent=player.bandages;
+    $('mbTn').textContent=player.torches;
+    $('mbT').style.borderColor=player.torchHeld?'rgba(255,160,64,.9)':'rgba(200,180,120,.4)';
+    $('mbC').style.opacity=spCd>0?0.35:1;
+    for(let i=0;i<3;i++){
+      const w=player.weapons[i];
+      if(w&&w.kind==='bow')$('hs'+i).querySelector('.hsub').textContent='화살 '+player.arrows;
+    }
   }
 }
 function updateHotbar(){
@@ -2108,7 +2192,7 @@ function openShop(){
 function closeOverlay(){
   $('inv').style.display='none';$('shop').style.display='none';$('tooltip').style.display='none';
   state='play';
-  renderer.domElement.requestPointerLock();
+  if(!IS_TOUCH)renderer.domElement.requestPointerLock();
 }
 function renderShop(){
   let h='';
@@ -2223,38 +2307,56 @@ function startGame(){
   loadFloor(1);
   buildViewWeapon();
   state='play';
-  renderer.domElement.requestPointerLock();
+  if(!IS_TOUCH)renderer.domElement.requestPointerLock();
+  else{
+    try{
+      const fs=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+      fs&&fs.then(()=>{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{});}).catch(()=>{});
+    }catch(_){}
+  }
   addLog('어둠 속으로 발을 들였다...','#9a8');
   addLog('E 상호작용 · Tab 인벤토리','#776');
 }
 
 /* ============================== 입력 ============================== */
+function toggleInv(){
+  if(state==='play'){state='inv';document.exitPointerLock&&document.exitPointerLock();renderInv();$('inv').style.display='block';bowSt.drawing=false;}
+  else if(state==='inv'||state==='shop')closeOverlay();
+}
+function switchWeapon(i){
+  if(state!=='play')return;
+  if(player.weapons[i]){player.wi=i;atk.active=false;bowSt.drawing=false;buildViewWeapon();enforceTwoHand();updateHotbar();sfx('equip');}
+}
+function usePotion(){
+  if(player.potions>0){player.potions--;player.hots.push({rate:11,remain:55});sfx('drink');addLog('치유 물약을 마셨다','#7fdc7f');}
+  else addLog('물약이 없다','#f88');
+}
+function useBandage(){
+  if(player.bandages>0){player.bandages--;player.hots.push({rate:6,remain:24});sfx('drink');addLog('붕대를 감았다','#7fdc7f');}
+  else addLog('붕대가 없다','#f88');
+}
+function releaseBow(btn){
+  if(bowSt.drawing&&btn===bowSt.btn){
+    if(state==='play'){
+      const p=clamp(bowSt.t/WKIND.bow.draw,0.22,1);
+      player.arrows--;player.st-=WKIND.bow.st;player.stDelay=0.8;
+      fireArrow(p);
+    }
+    bowSt.drawing=false;
+  }
+}
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;
-  if(e.code==='Tab'){
-    e.preventDefault();
-    if(state==='play'){state='inv';document.exitPointerLock&&document.exitPointerLock();renderInv();$('inv').style.display='block';bowSt.drawing=false;}
-    else if(state==='inv'||state==='shop')closeOverlay();
-    return;
-  }
+  if(e.code==='Tab'){e.preventDefault();toggleInv();return;}
   if(e.code==='Escape'&&(state==='inv'||state==='shop')){closeOverlay();return;}
   if(state!=='play')return;
   if(e.code==='KeyE')doInteract();
   if(e.code==='KeyC')trySpecial();
   if(e.code==='KeyT')toggleTorch();
   if(e.code==='KeyX'&&curW().kind!=='bow')player.blocking=true;
-  if(e.code==='Digit1'||e.code==='Digit2'||e.code==='Digit3'){
-    const i=+e.code.slice(-1)-1;
-    if(player.weapons[i]){player.wi=i;atk.active=false;bowSt.drawing=false;buildViewWeapon();enforceTwoHand();updateHotbar();sfx('equip');}
-  }
-  if(e.code==='KeyQ'){
-    if(player.potions>0){player.potions--;player.hots.push({rate:11,remain:55});sfx('drink');addLog('치유 물약을 마셨다','#7fdc7f');}
-    else addLog('물약이 없다','#f88');
-  }
-  if(e.code==='KeyF'){
-    if(player.bandages>0){player.bandages--;player.hots.push({rate:6,remain:24});sfx('drink');addLog('붕대를 감았다','#7fdc7f');}
-    else addLog('붕대가 없다','#f88');
-  }
+  if(e.code==='Digit1'||e.code==='Digit2'||e.code==='Digit3')switchWeapon(+e.code.slice(-1)-1);
+  if(e.code==='KeyQ')usePotion();
+  if(e.code==='KeyF')useBandage();
   if(e.code==='KeyM'){muted=!muted;if(master)master.gain.value=muted?0:0.5;addLog(muted?'음소거':'소리 켜짐','#999');}
 });
 document.addEventListener('keyup',e=>{
@@ -2271,19 +2373,10 @@ document.addEventListener('mousedown',e=>{
   if(e.button===0)tryLeftHand(0);       // 좌클릭 = 왼손
   else if(e.button===2)tryRightHand(2); // 우클릭 = 오른손
 });
-document.addEventListener('mouseup',e=>{
-  if(bowSt.drawing&&e.button===bowSt.btn){
-    if(state==='play'){
-      const p=clamp(bowSt.t/WKIND.bow.draw,0.22,1);
-      player.arrows--;player.st-=WKIND.bow.st;player.stDelay=0.8;
-      fireArrow(p);
-    }
-    bowSt.drawing=false;
-  }
-});
+document.addEventListener('mouseup',e=>releaseBow(e.button));
 document.addEventListener('contextmenu',e=>e.preventDefault());
 renderer.domElement.addEventListener('click',()=>{
-  if(state==='play'&&document.pointerLockElement!==renderer.domElement)
+  if(!IS_TOUCH&&state==='play'&&document.pointerLockElement!==renderer.domElement)
     renderer.domElement.requestPointerLock();
 });
 document.addEventListener('pointerlockchange',()=>{
@@ -2300,6 +2393,83 @@ $('paused').addEventListener('click',()=>{renderer.domElement.requestPointerLock
 $('btnStart').addEventListener('click',()=>{initAudio();startGame();});
 $('btnRetry').addEventListener('click',()=>{startGame();});
 $('bestLabel').textContent=bestDepth()>0?'최고 기록: 지하 '+bestDepth()+'층':'아직 아무도 살아 돌아오지 못했다';
+
+/* ============================== 모바일 터치 컨트롤 ============================== */
+const IS_TOUCH=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)||/[?&]touch/.test(location.search);
+const joy={id:null,ox:0,oy:0,x:0,z:0,mag:0};
+$('ovCloseInv').addEventListener('click',closeOverlay);
+$('ovCloseShop').addEventListener('click',closeOverlay);
+if(IS_TOUCH){
+  document.body.classList.add('touchmode');
+  $('menu').querySelector('.controls').innerHTML=
+    '📱 <b>왼쪽 화면</b> 드래그 — 이동 (가장자리 너머로 밀면 질주) · <b>오른쪽 화면</b> 드래그 — 시점<br>'+
+    '<b>⚔ 오른손</b> 무기 공격 (활: 길게 눌렀다 놓기) · <b>🤜 왼손</b> 펀치 / 횃불 던지기<br>'+
+    '<b>🛡 막기</b> 누르고 유지 · <b>✋ 잡기</b> 상자·줍기·계단·상인 · <b>⚡</b> 특수 공격 · <b>🔥</b> 횃불 들기<br>'+
+    '<b>🎒</b> 가방 · 하단 핫바 탭 — 무기 교체<br><br>'+
+    '어둠 속에서 보물을 찾고, 수호자를 쓰러뜨리거나 룬 퍼즐을 풀어 더 깊이 내려가라.<br>'+
+    '횃불 없이는 한 치 앞도 보이지 않는다. 죽음은 영원하다.';
+  const look={id:null,px:0,py:0};
+  const JR=44; // 조이스틱 최대 반경(px)
+  const base=$('joyBase'),knob=$('joyKnob');
+  function joyHide(){base.style.display='none';joy.id=null;joy.x=0;joy.z=0;joy.mag=0;}
+  renderer.domElement.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(state!=='play')return;
+    for(const t of e.changedTouches){
+      if(t.clientX<innerWidth*0.45&&joy.id===null){
+        joy.id=t.identifier;joy.ox=t.clientX;joy.oy=t.clientY;joy.x=0;joy.z=0;joy.mag=0;
+        base.style.display='block';base.style.left=(t.clientX-58)+'px';base.style.top=(t.clientY-58)+'px';
+        knob.style.transform='translate(0,0)';
+      }else if(look.id===null){
+        look.id=t.identifier;look.px=t.clientX;look.py=t.clientY;
+      }
+    }
+  },{passive:false});
+  renderer.domElement.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      if(t.identifier===joy.id){
+        let dx=t.clientX-joy.ox,dy=t.clientY-joy.oy;
+        const d=Math.hypot(dx,dy);
+        joy.mag=d/JR;
+        if(d>JR){dx*=JR/d;dy*=JR/d;}
+        knob.style.transform='translate('+dx+'px,'+dy+'px)';
+        joy.x=dx/JR;joy.z=dy/JR; // 위로 밀면 전진(-z)
+      }else if(t.identifier===look.id){
+        yaw-=(t.clientX-look.px)*0.005;
+        pitch=clamp(pitch-(t.clientY-look.py)*0.005,-1.45,1.45);
+        look.px=t.clientX;look.py=t.clientY;
+      }
+    }
+  },{passive:false});
+  const tEnd=e=>{
+    for(const t of e.changedTouches){
+      if(t.identifier===joy.id)joyHide();
+      else if(t.identifier===look.id)look.id=null;
+    }
+  };
+  renderer.domElement.addEventListener('touchend',tEnd);
+  renderer.domElement.addEventListener('touchcancel',tEnd);
+  function bindBtn(id,down,up){
+    const el=$(id);
+    el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();el.classList.add('on');down&&down();},{passive:false});
+    const u=e=>{e.preventDefault();e.stopPropagation();el.classList.remove('on');up&&up();};
+    el.addEventListener('touchend',u,{passive:false});
+    el.addEventListener('touchcancel',u,{passive:false});
+  }
+  bindBtn('mbR',()=>{if(state==='play')tryRightHand(2);},()=>releaseBow(2));
+  bindBtn('mbL',()=>{if(state==='play')tryLeftHand(0);},()=>releaseBow(0));
+  bindBtn('mbBlock',()=>{if(state==='play'&&curW().kind!=='bow')player.blocking=true;},()=>{player.blocking=false;});
+  bindBtn('mbJump',()=>{keys.Space=true;},()=>{keys.Space=false;});
+  bindBtn('mbE',()=>{if(state==='play')doInteract();});
+  bindBtn('mbC',()=>{if(state==='play')trySpecial();});
+  bindBtn('mbT',()=>{if(state==='play')toggleTorch();});
+  bindBtn('mbQ',()=>{if(state==='play')usePotion();});
+  bindBtn('mbF',()=>{if(state==='play')useBandage();});
+  bindBtn('mbBag',()=>{toggleInv();});
+  for(let i=0;i<3;i++)
+    $('hs'+i).addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();switchWeapon(i);},{passive:false});
+}
 
 /* ============================== 메인 루프 ============================== */
 const clock=new THREE.Clock();
