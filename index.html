@@ -654,43 +654,157 @@ const BOSSES=[
   {key:'necro',name:'흑마법사 베일로스', color:0x5a2a7a,scale:1.7,hp:240,dmg:18,spd:2.4,rate:2.0,windup:0.7,ranged:true,projSpd:11,specials:['volley','blink','summon']},
   {key:'abyss',name:'심연의 기사 아자크',color:0x26263a,scale:2.1,hp:340,dmg:30,spd:3.1,range:2.4,rate:1.5,windup:0.5,specials:['charge','slam']},
 ];
+function prim(geo,mat,x,y,z,rx,ry,rz){
+  const m=new THREE.Mesh(geo,mat);
+  m.position.set(x||0,y||0,z||0);
+  if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+  return m;
+}
 function makeHumanoid(o){
   const mats=[];
-  const lm=c=>{const m=new THREE.MeshLambertMaterial({color:c,transparent:!!o.ghost,opacity:o.ghost?0.55:1});mats.push(m);return m;};
+  const lm=(c,e)=>{
+    const m=new THREE.MeshLambertMaterial({color:c,flatShading:true,transparent:!!o.ghost,opacity:o.ghost?0.6:1});
+    if(e)m.emissive=new THREE.Color(e);
+    mats.push(m);return m;
+  };
+  const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+  const Cy=(rt,rb,h,s)=>new THREE.CylinderGeometry(rt,rb,h,s||6);
+  const Co=(r,h,s)=>new THREE.ConeGeometry(r,h,s||6);
+  const Ico=r=>new THREE.IcosahedronGeometry(r,0);
   const g=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.78,0.34),lm(o.color));
-  body.position.y=1.05;g.add(body);
-  const head=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.42,0.42),lm(o.color));
-  head.position.y=1.68;g.add(head);
+  const kind=o.kind||'human';
+  const bodyM=lm(o.color),darkM=lm(0x222228),boneM=lm(0xd8d2c2);
   const eyeM=new THREE.MeshBasicMaterial({color:o.eye||0xff2222});
-  for(const s of [-1,1]){
-    const e=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.05,0.04),eyeM);
-    e.position.set(0.1*s,1.72,0.22);g.add(e);
-  }
-  const armR=new THREE.Group();armR.position.set(0.42,1.42,0);
-  const amR=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.66,0.16),lm(o.color));
-  amR.position.y=-0.28;armR.add(amR);g.add(armR);
-  const armL=new THREE.Group();armL.position.set(-0.42,1.42,0);
-  const amL=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.66,0.16),lm(o.color));
-  amL.position.y=-0.28;armL.add(amL);g.add(armL);
-  let legR=null,legL=null;
-  if(!o.ghost){
-    legR=new THREE.Group();legR.position.set(0.16,0.72,0);
-    const lmR=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.7,0.18),lm(o.color));
-    lmR.position.y=-0.35;legR.add(lmR);g.add(legR);
-    legL=new THREE.Group();legL.position.set(-0.16,0.72,0);
-    const lmL=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.7,0.18),lm(o.color));
-    lmL.position.y=-0.35;legL.add(lmL);g.add(legL);
-  }
-  if(o.weapon){
-    const bl=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.55,0.07),lm(0x99a0aa));
-    bl.position.set(0,-0.62,0.18);bl.rotation.x=-1.1;armR.add(bl);
-  }
-  if(o.horns){
-    const hm=lm(0x2a2a30);
-    for(const s of [-1,1]){
-      const h=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.35,6),hm);
-      h.position.set(0.16*s,1.98,0);h.rotation.z=-0.5*s;g.add(h);
+  let armR=new THREE.Group(),armL=new THREE.Group(),legR=null,legL=null;
+
+  if(kind==='mimic'){
+    // 이빨 달린 상자
+    const wood=lm(0x7a4f26),wood2=lm(0x5e3c1c),tooth=lm(0xe8e2d0);
+    g.add(prim(B(0.95,0.52,0.65),wood,0,0.38));
+    g.add(prim(B(1.0,0.08,0.7),lm(0xb89030),0,0.55));
+    for(let i=-2;i<=2;i++)g.add(prim(Co(0.05,0.14,4),tooth,i*0.17,0.68,0.22));
+    g.add(prim(B(0.5,0.1,0.34),lm(0xaa3344),0,0.62,0.05,-0.15)); // 혀
+    armR.position.set(0,0.64,-0.33); // 뚜껑 = 턱
+    armR.add(prim(B(0.95,0.2,0.65),wood2,0,0.1,0.33));
+    for(let i=-2;i<=2;i++)armR.add(prim(Co(0.05,0.13,4),tooth,i*0.17,0.02,0.55,Math.PI));
+    armR.add(prim(B(0.1,0.07,0.05),eyeM,-0.25,0.16,0.62));
+    armR.add(prim(B(0.1,0.07,0.05),eyeM,0.25,0.16,0.62));
+    g.add(armR);g.add(armL);
+    legR=new THREE.Group();legR.position.set(0.32,0.14,0.2);
+    legR.add(prim(Cy(0.05,0.07,0.24,5),wood2,0,-0.02));g.add(legR);
+    legL=new THREE.Group();legL.position.set(-0.32,0.14,0.2);
+    legL.add(prim(Cy(0.05,0.07,0.24,5),wood2,0,-0.02));g.add(legL);
+    g.add(prim(Cy(0.05,0.07,0.24,5),wood2,0.32,0.12,-0.2));
+    g.add(prim(Cy(0.05,0.07,0.24,5),wood2,-0.32,0.12,-0.2));
+  }else if(kind==='wraith'){
+    // 후드 + 유령 꼬리
+    g.add(prim(Co(0.36,0.62,6),bodyM,0,1.78));
+    g.add(prim(Ico(0.17),darkM,0,1.6,0.06));
+    g.add(prim(B(0.07,0.05,0.05),eyeM,-0.08,1.62,0.18));
+    g.add(prim(B(0.07,0.05,0.05),eyeM,0.08,1.62,0.18));
+    g.add(prim(Cy(0.3,0.42,0.7,6),bodyM,0,1.15));
+    g.add(prim(Co(0.42,1.0,6),bodyM,0,0.45,0,Math.PI));
+    armR.position.set(0.4,1.35,0);
+    armR.add(prim(Cy(0.055,0.075,0.62,5),bodyM,0,-0.3));
+    armL.position.set(-0.4,1.35,0);
+    armL.add(prim(Cy(0.055,0.075,0.62,5),bodyM,0,-0.3));
+    g.add(armR);g.add(armL);
+  }else if(kind==='cultist'||kind==='boss_necro'||kind==='merchant'){
+    // 로브 차림
+    g.add(prim(Cy(0.27,0.5,1.27,6),bodyM,0,0.7));
+    g.add(prim(B(0.5,0.06,0.36),darkM,0,1.05));
+    if(kind==='merchant'){
+      g.add(prim(Ico(0.2),lm(0xc09a78),0,1.62));
+      g.add(prim(B(0.2,0.16,0.08),lm(0xb8b0a0),0,1.5,0.16)); // 수염
+      g.add(prim(Cy(0.24,0.32,0.26,6),bodyM,0,1.8));         // 모자
+      g.add(prim(B(0.55,0.65,0.3),lm(0x5a432c),0,1.25,-0.36)); // 배낭
+      g.add(prim(Cy(0.09,0.09,0.5,6),lm(0x8a6a4a),0,1.64,-0.38,0,0,Math.PI/2)); // 침낭
+    }else{
+      g.add(prim(Co(0.3,0.55,6),bodyM,0,1.78));   // 후드
+      g.add(prim(Ico(0.16),darkM,0,1.58,0.05));
+      g.add(prim(B(0.06,0.05,0.05),eyeM,-0.07,1.6,0.16));
+      g.add(prim(B(0.06,0.05,0.05),eyeM,0.07,1.6,0.16));
+    }
+    armR.position.set(0.36,1.38,0);
+    armR.add(prim(Cy(0.07,0.1,0.6,5),bodyM,0,-0.28)); // 소매
+    armL.position.set(-0.36,1.38,0);
+    armL.add(prim(Cy(0.07,0.1,0.6,5),bodyM,0,-0.28));
+    if(kind!=='merchant'){
+      armR.add(prim(Cy(0.025,0.025,1.1,5),lm(0x4a3520),0,-0.5,0.16)); // 지팡이
+      armR.add(prim(Ico(0.07),lm(0x9944ff,0x6622cc),0,0.12,0.16));   // 보주
+    }
+    g.add(armR);g.add(armL);
+  }else{
+    // 공용 휴머노이드: skeleton / archer / zombie / knight / boss_lord / boss_golem / boss_abyss
+    const skel=(kind==='skeleton'||kind==='archer'||kind==='boss_lord');
+    const bulky=(kind==='knight'||kind==='boss_golem'||kind==='boss_abyss');
+    const limbM=skel?boneM:bodyM;
+    const limbR=skel?0.05:0.07;
+    g.add(prim(Cy(bulky?0.4:0.32,bulky?0.3:0.24,0.55,6),bodyM,0,1.22)); // 가슴
+    g.add(prim(Cy(0.2,0.24,0.3,6),bodyM,0,0.85));                       // 골반
+    if(skel){
+      for(let i=0;i<3;i++)g.add(prim(B(0.5,0.045,0.3),boneM,0,1.12+i*0.12,0.02)); // 갈비뼈
+      g.add(prim(Cy(0.04,0.05,0.3,5),boneM,0,0.95)); // 척추
+    }
+    if(kind==='knight'||kind==='boss_abyss'){
+      g.add(prim(Cy(0.2,0.22,0.34,6),bodyM,0,1.68));   // 투구
+      g.add(prim(Co(0.2,0.18,6),bodyM,0,1.94));
+      g.add(prim(B(0.3,0.05,0.06),eyeM,0,1.68,0.18));  // 발광 슬릿
+    }else if(skel){
+      g.add(prim(Ico(0.2),boneM,0,1.68));              // 해골
+      g.add(prim(B(0.26,0.12,0.1),boneM,0,1.55,0.04)); // 턱
+      g.add(prim(B(0.07,0.06,0.05),eyeM,-0.08,1.7,0.16));
+      g.add(prim(B(0.07,0.06,0.05),eyeM,0.08,1.7,0.16));
+    }else{
+      g.add(prim(Ico(0.21),bodyM,0,1.66,kind==='zombie'?0.08:0,0,0,kind==='zombie'?0.25:0));
+      g.add(prim(B(0.07,0.05,0.05),eyeM,-0.08,1.68,0.16));
+      g.add(prim(B(0.07,0.05,0.05),eyeM,0.08,1.68,0.16));
+    }
+    if(kind==='zombie')g.add(prim(B(0.3,0.26,0.06),lm(0x4a2a2a),0.06,1.06,0.2)); // 배 상처
+    if(kind==='boss_golem'){
+      g.add(prim(Ico(0.26),bodyM,0.42,1.56,0));  // 어깨 바위
+      g.add(prim(Ico(0.26),bodyM,-0.42,1.56,0));
+      g.add(prim(Ico(0.12),lm(0x556644),0.15,1.3,0.26));
+    }
+    if(kind==='knight'||kind==='boss_abyss'){
+      g.add(prim(Co(0.18,0.2,6),bodyM,0.42,1.58,0,0,0,-0.4)); // 견갑
+      g.add(prim(Co(0.18,0.2,6),bodyM,-0.42,1.58,0,0,0,0.4));
+    }
+    if(kind==='boss_lord'){
+      const crM=lm(0xc8a030,0x664400);
+      g.add(prim(Cy(0.2,0.2,0.1,6),crM,0,1.9)); // 왕관
+      for(let i=0;i<4;i++){const a=i*Math.PI/2;g.add(prim(Co(0.04,0.14,4),crM,Math.sin(a)*0.17,2.0,Math.cos(a)*0.17));}
+    }
+    armR.position.set(bulky?0.48:0.4,1.42,0);
+    armR.add(prim(Ico(skel?0.07:0.1),limbM,0,0,0));
+    armR.add(prim(Cy(limbR,limbR+0.02,0.62,5),limbM,0,-0.3));
+    armR.add(prim(Ico(0.07),limbM,0,-0.6,0));
+    armL.position.set(-(bulky?0.48:0.4),1.42,0);
+    armL.add(prim(Ico(skel?0.07:0.1),limbM,0,0,0));
+    armL.add(prim(Cy(limbR,limbR+0.02,0.62,5),limbM,0,-0.3));
+    armL.add(prim(Ico(0.07),limbM,0,-0.6,0));
+    g.add(armR);g.add(armL);
+    legR=new THREE.Group();legR.position.set(0.16,0.74,0);
+    legR.add(prim(Cy(limbR+0.01,limbR+0.03,0.72,5),limbM,0,-0.36));
+    g.add(legR);
+    legL=new THREE.Group();legL.position.set(-0.16,0.74,0);
+    legL.add(prim(Cy(limbR+0.01,limbR+0.03,0.72,5),limbM,0,-0.36));
+    g.add(legL);
+    if(kind==='archer'){
+      armL.add(prim(new THREE.TorusGeometry(0.3,0.02,4,10,2.2),lm(0x6a4a2a),0,-0.58,0.05,0,0,-1.1)); // 활
+    }else if(o.weapon){
+      const swM=lm(0x9aa2ae);
+      const wg=new THREE.Group();wg.position.set(0,-0.62,0.1);wg.rotation.x=-1.2;
+      wg.add(prim(B(0.06,0.5,0.025),swM,0,0.32,0));
+      wg.add(prim(Co(0.04,0.1,4),swM,0,0.6,0));
+      wg.add(prim(B(0.16,0.03,0.05),darkM,0,0.06,0));
+      armR.add(wg);
+      if(kind==='knight')armL.add(prim(Cy(0.26,0.3,0.06,6),darkM,0,-0.45,0.12,Math.PI/2)); // 방패
+    }
+    if(o.horns){
+      const hm=lm(0x2a2a30);
+      g.add(prim(Co(0.07,0.4,5),hm,0.18,2.02,0,0,0,-0.5));
+      g.add(prim(Co(0.07,0.4,5),hm,-0.18,2.02,0,0,0,0.5));
     }
   }
   if(o.scale)g.scale.setScalar(o.scale);
@@ -717,7 +831,7 @@ function spawnEnemyAt(typeKey,x,z,opts){
     strafe:Math.random()<0.5?1:-1,stuckT:0,lastX:x,lastZ:z,flashT:0,staggerT:0,
     swing:null,casting:null,scale:1};
   if(opts.elite){e.hp*=1.8;e.maxhp*=1.8;e.dmg*=1.45;e.elite=true;e.scale=1.18;e.name='정예 '+e.name;}
-  const vis=makeHumanoid({color:t.color,ghost:t.ghost,weapon:!t.ranged&&typeKey!=='zombie'&&typeKey!=='mimic',scale:e.scale});
+  const vis=makeHumanoid({kind:typeKey,color:t.color,ghost:t.ghost,weapon:!t.ranged&&typeKey!=='zombie'&&typeKey!=='mimic',scale:e.scale});
   e.vis=vis;e.mesh=vis.g;
   const hb=makeHpBar(e.scale);e.hpBar=hb;vis.g.add(hb.grp);
   vis.g.position.set(x,0,z);worldG.add(vis.g);
@@ -734,7 +848,7 @@ function spawnBoss(arch,x,z){
     strafe:1,stuckT:0,lastX:x,lastZ:z,flashT:0,staggerT:0,swing:null,casting:null,
     isBoss:true,scale:arch.scale,spCd:3,summoned:0,charge:null,specials:arch.specials};
   e.maxhp=e.hp;
-  const vis=makeHumanoid({color:arch.color,weapon:!arch.ranged,horns:true,scale:arch.scale,eye:0xff4400});
+  const vis=makeHumanoid({kind:'boss_'+arch.key,color:arch.color,weapon:arch.key==='lord'||arch.key==='abyss',horns:arch.key==='abyss',scale:arch.scale,eye:0xff4400});
   e.vis=vis;e.mesh=vis.g;
   vis.g.position.set(x,0,z);worldG.add(vis.g);
   enemies.push(e);boss=e;
@@ -1520,43 +1634,59 @@ function buildViewWeapon(){
   while(viewW.children.length)viewW.remove(viewW.children[0]);
   bowParts=null;
   const w=curW();
-  const metal=new THREE.MeshLambertMaterial({color:0xb8c0cc});
-  const dark=new THREE.MeshLambertMaterial({color:0x55585f});
-  const wood=new THREE.MeshLambertMaterial({color:0x6a4a2a});
+  const metal=new THREE.MeshLambertMaterial({color:0xb8c0cc,flatShading:true});
+  const dark=new THREE.MeshLambertMaterial({color:0x4a4e58,flatShading:true});
+  const wood=new THREE.MeshLambertMaterial({color:0x6a4a2a,flatShading:true});
+  const gold=new THREE.MeshLambertMaterial({color:0xb89030,flatShading:true});
   if(w.rar>=2)metal.emissive=new THREE.Color(RAR[w.rar].c).multiplyScalar(0.22);
   const grp=new THREE.Group();
   const k=w.kind;
   if(k==='fist'){
-    const h=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.12,0.12),new THREE.MeshLambertMaterial({color:0xc09a78}));
-    grp.add(h);
+    const skin=new THREE.MeshLambertMaterial({color:0xc09a78,flatShading:true});
+    grp.add(prim(new THREE.BoxGeometry(0.09,0.11,0.13),skin,0,0,0));
+    grp.add(prim(new THREE.BoxGeometry(0.035,0.05,0.06),skin,-0.06,0.02,0.03));
   }else if(k==='bow'){
-    const lim=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.55,0.04),wood);lim.position.y=0.32;lim.rotation.z=0;lim.rotation.x=0.35;grp.add(lim);
-    const lim2=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.55,0.04),wood);lim2.position.y=-0.32;lim2.rotation.x=-0.35;grp.add(lim2);
-    const mid=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.28,0.06),wood);grp.add(mid);
-    const str=new THREE.Mesh(new THREE.BoxGeometry(0.012,1.05,0.012),new THREE.MeshBasicMaterial({color:0xddddcc}));
-    str.position.z=0.18;grp.add(str);
-    const arrow=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.022,0.6),wood);
-    arrow.position.set(0,0,0.12);arrow.visible=false;grp.add(arrow);
+    // 곡선 활: 토러스 호
+    const arcGeo=new THREE.TorusGeometry(0.42,0.02,5,14,2.4);
+    arcGeo.rotateZ(-1.2);
+    const arc=new THREE.Mesh(arcGeo,wood);
+    arc.rotation.y=Math.PI/2; // 배가 전방(-Z)
+    grp.add(arc);
+    grp.add(prim(new THREE.CylinderGeometry(0.03,0.03,0.16,6),dark,0,0,-0.41)); // 그립
+    const str=prim(new THREE.BoxGeometry(0.012,0.78,0.012),new THREE.MeshBasicMaterial({color:0xddddcc}),0,0,-0.15);
+    grp.add(str);
+    const arrow=new THREE.Group();
+    arrow.add(prim(new THREE.CylinderGeometry(0.012,0.012,0.6,5),wood,0,0,0,Math.PI/2));
+    arrow.add(prim(new THREE.ConeGeometry(0.025,0.09,4),metal,0,0,-0.34,-Math.PI/2));
+    const flM=new THREE.MeshLambertMaterial({color:0xcc4444,flatShading:true});
+    arrow.add(prim(new THREE.BoxGeometry(0.002,0.05,0.07),flM,0,0,0.26));
+    arrow.add(prim(new THREE.BoxGeometry(0.05,0.002,0.07),flM,0,0,0.26));
+    arrow.visible=false;arrow.position.z=-0.08;
+    grp.add(arrow);
     bowParts={string:str,arrow:arrow};
   }else{
-    const lens={dagger:0.34,sword:0.52,long:0.72,axe:0.6,spear:1.15}[k]||0.5;
-    const grip=new THREE.Mesh(new THREE.BoxGeometry(0.045,0.2,0.045),k==='spear'||k==='axe'?wood:dark);
-    grip.position.y=0.0;grp.add(grip);
+    // 근접: 그립 + 폼멜 + 가드 + 뾰족한 날
+    const lens={dagger:0.3,sword:0.48,long:0.68,axe:0.55,spear:1.05}[k]||0.5;
+    grp.add(prim(new THREE.CylinderGeometry(0.024,0.028,0.16,6),(k==='spear'||k==='axe')?wood:dark,0,0,0));
+    grp.add(prim(new THREE.IcosahedronGeometry(0.035,0),gold,0,-0.1,0)); // 폼멜
     if(k==='axe'){
-      const handle=new THREE.Mesh(new THREE.BoxGeometry(0.05,lens,0.05),wood);
-      handle.position.y=lens/2;grp.add(handle);
-      const head=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.2,0.05),metal);
-      head.position.set(0.13,lens-0.05,0);grp.add(head);
+      grp.add(prim(new THREE.CylinderGeometry(0.026,0.032,lens,6),wood,0,lens/2+0.08,0));
+      grp.add(prim(new THREE.BoxGeometry(0.16,0.2,0.045),metal,0.12,lens-0.02,0));
+      const edge=prim(new THREE.ConeGeometry(0.115,0.12,4),metal,0.24,lens-0.02,0,0,0,-Math.PI/2);
+      edge.scale.z=0.38;grp.add(edge); // 쐐기형 날끝
+      grp.add(prim(new THREE.ConeGeometry(0.045,0.12,4),dark,-0.1,lens-0.02,0,0,0,Math.PI/2)); // 뒤쪽 스파이크
     }else if(k==='spear'){
-      const shaft=new THREE.Mesh(new THREE.BoxGeometry(0.045,lens,0.045),wood);
-      shaft.position.y=lens/2;grp.add(shaft);
-      const tip=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.22,6),metal);
-      tip.position.y=lens+0.1;grp.add(tip);
+      grp.add(prim(new THREE.CylinderGeometry(0.02,0.026,lens,6),wood,0,lens/2+0.08,0));
+      const tip=prim(new THREE.ConeGeometry(0.05,0.3,4),metal,0,lens+0.23,0);
+      tip.scale.z=0.45;grp.add(tip); // 잎사귀형 창날
+      grp.add(prim(new THREE.CylinderGeometry(0.032,0.032,0.05,6),gold,0,lens+0.06,0));
     }else{
-      const guard=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.035,0.06),dark);
-      guard.position.y=0.12;grp.add(guard);
-      const blade=new THREE.Mesh(new THREE.BoxGeometry(0.055,lens,0.022),metal);
-      blade.position.y=0.13+lens/2;grp.add(blade);
+      grp.add(prim(new THREE.BoxGeometry(k==='dagger'?0.12:0.2,0.03,0.05),gold,0,0.12,0)); // 가드
+      const bw=k==='dagger'?0.045:(k==='long'?0.06:0.055);
+      grp.add(prim(new THREE.BoxGeometry(bw,lens,0.02),metal,0,0.14+lens/2,0));
+      grp.add(prim(new THREE.BoxGeometry(bw*0.3,lens*0.9,0.024),dark,0,0.14+lens/2,0)); // 혈조
+      const tip=prim(new THREE.ConeGeometry(bw*0.7,0.1,4),metal,0,0.14+lens+0.05,0,0,Math.PI/4,0);
+      tip.scale.z=0.3;grp.add(tip); // 칼끝
     }
   }
   viewW.add(grp);
@@ -1570,8 +1700,8 @@ function updateViewWeapon(dt){
     const dp=bowSt.drawing?clamp(bowSt.t/WKIND.bow.draw,0,1):0;
     if(bowParts){
       bowParts.arrow.visible=bowSt.drawing;
-      bowParts.arrow.position.z=0.12+dp*0.2;
-      bowParts.string.position.z=0.18+dp*0.16;
+      bowParts.arrow.position.z=-0.08+dp*0.24;
+      bowParts.string.position.z=-0.15+dp*0.2;
     }
     if(bowSt.drawing){px-=dp*0.1;pz+=dp*0.06;ry+=dp*0.1;}
   }else{
@@ -1595,11 +1725,13 @@ function updateViewWeapon(dt){
 const viewT=new THREE.Group();camera.add(viewT);
 let viewTFlame=null;
 (function buildViewTorch(){
-  const stick=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.52,0.05),new THREE.MeshLambertMaterial({color:0x6a4a2a}));
+  const stick=new THREE.Mesh(new THREE.CylinderGeometry(0.024,0.03,0.54,6),new THREE.MeshLambertMaterial({color:0x6a4a2a,flatShading:true}));
   stick.position.y=0.05;viewT.add(stick);
-  const head=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.14,0.1),
-    new THREE.MeshLambertMaterial({color:0x33231a,emissive:0xcc5500,emissiveIntensity:0.9}));
-  head.position.y=0.36;viewT.add(head);
+  const wrap=new THREE.Mesh(new THREE.TorusGeometry(0.045,0.014,4,8),new THREE.MeshLambertMaterial({color:0x3a2c20,flatShading:true}));
+  wrap.rotation.x=Math.PI/2;wrap.position.y=0.26;viewT.add(wrap);
+  const head=new THREE.Mesh(new THREE.IcosahedronGeometry(0.075,0),
+    new THREE.MeshLambertMaterial({color:0x33231a,emissive:0xcc5500,emissiveIntensity:0.9,flatShading:true}));
+  head.position.y=0.38;viewT.add(head);
   viewTFlame=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffa040,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
   viewTFlame.position.y=0.5;viewTFlame.scale.set(0.34,0.34,1);viewT.add(viewTFlame);
   viewT.visible=false;
@@ -1898,7 +2030,7 @@ function spawnMerchant(d){
     if(dd>2.5&&dd<8&&(!best||dd<best.d))best={x:x,z:z,d:dd};
   }
   if(!best)best={x:d.spawn.x+2,z:d.spawn.z};
-  const vis=makeHumanoid({color:0x7a5c3a,eye:0xffcc66});
+  const vis=makeHumanoid({kind:'merchant',color:0x7a5c3a,eye:0xffcc66});
   vis.g.position.set(best.x,0,best.z);
   const lan=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.18,0.14),
     new THREE.MeshLambertMaterial({color:0xffcc66,emissive:0xaa7722}));
