@@ -2395,7 +2395,10 @@ $('btnRetry').addEventListener('click',()=>{startGame();});
 $('bestLabel').textContent=bestDepth()>0?'최고 기록: 지하 '+bestDepth()+'층':'아직 아무도 살아 돌아오지 못했다';
 
 /* ============================== 모바일 터치 컨트롤 ============================== */
-const IS_TOUCH=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)||/[?&]touch/.test(location.search);
+const IS_TOUCH=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)
+  ||/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  ||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent)) // 아이패드 데스크톱 모드
+  ||/[?&]touch/.test(location.search);
 const joy={id:null,ox:0,oy:0,x:0,z:0,mag:0};
 $('ovCloseInv').addEventListener('click',closeOverlay);
 $('ovCloseShop').addEventListener('click',closeOverlay);
@@ -2415,7 +2418,7 @@ if(IS_TOUCH){
   renderer.domElement.addEventListener('touchstart',e=>{
     e.preventDefault();
     if(state!=='play')return;
-    for(const t of e.changedTouches){
+    for(const t of Array.from(e.changedTouches)){
       if(t.clientX<innerWidth*0.45&&joy.id===null){
         joy.id=t.identifier;joy.ox=t.clientX;joy.oy=t.clientY;joy.x=0;joy.z=0;joy.mag=0;
         base.style.display='block';base.style.left=(t.clientX-58)+'px';base.style.top=(t.clientY-58)+'px';
@@ -2427,7 +2430,7 @@ if(IS_TOUCH){
   },{passive:false});
   renderer.domElement.addEventListener('touchmove',e=>{
     e.preventDefault();
-    for(const t of e.changedTouches){
+    for(const t of Array.from(e.changedTouches)){
       if(t.identifier===joy.id){
         let dx=t.clientX-joy.ox,dy=t.clientY-joy.oy;
         const d=Math.hypot(dx,dy);
@@ -2443,7 +2446,7 @@ if(IS_TOUCH){
     }
   },{passive:false});
   const tEnd=e=>{
-    for(const t of e.changedTouches){
+    for(const t of Array.from(e.changedTouches)){
       if(t.identifier===joy.id)joyHide();
       else if(t.identifier===look.id)look.id=null;
     }
