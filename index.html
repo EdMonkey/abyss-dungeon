@@ -109,34 +109,40 @@
   .mbtn .mlab { font-size:10px; color:#b8ae90; }
   .mbtn .mnum { position:absolute; top:-4px; right:-2px; min-width:18px; height:18px; border-radius:9px; background:#3a3326;
     border:1px solid #6a5a38; font-size:11px; color:#ffd24a; display:flex; align-items:center; justify-content:center; padding:0 3px; }
-  #mbR    { right:16px;  bottom:86px;  width:84px; height:84px; font-size:13px; }
-  #mbJump { right:30px;  bottom:186px; width:56px; height:56px; }
-  #mbL    { right:114px; bottom:42px;  width:66px; height:66px; font-size:12px; }
-  #mbBlock{ right:118px; bottom:130px; width:60px; height:60px; font-size:12px; }
-  #mbE    { right:198px; bottom:86px;  width:60px; height:60px; }
-  #mbC    { right:196px; bottom:172px; width:52px; height:52px; }
-  #mbT    { left:14px;   top:104px;  width:50px; height:50px; }
-  #mbQ    { left:14px;   top:168px;  width:50px; height:50px; }
-  #mbF    { left:14px;   top:232px;  width:50px; height:50px; }
-  #mbBag  { right:10px;  top:136px;  width:48px; height:48px; }
+  /* 우하단 회전스틱 기준 10~11시 방향에 양손 버튼 (브롤스타즈식) */
+  #mbR    { right:188px; bottom:148px; width:74px; height:74px; font-size:13px; }
+  #mbL    { right:124px; bottom:226px; width:60px; height:60px; font-size:12px; }
+  #mbJump { right:210px; bottom:74px;  width:56px; height:56px; }
+  #mbBlock{ right:160px; bottom:12px;  width:58px; height:58px; font-size:12px; }
+  #mbE    { right:200px; bottom:234px; width:56px; height:56px; }
+  #mbC    { right:56px;  bottom:206px; width:50px; height:50px; }
+  /* 상단 아이템 슬롯 — 탭하여 발동 */
+  #mbT,#mbQ,#mbF { top:14px; left:50%; width:48px; height:48px; border-radius:10px; }
+  #mbT { margin-left:112px; } #mbQ { margin-left:166px; } #mbF { margin-left:220px; }
+  #mbBag  { left:14px; top:36%; width:52px; height:52px; }
   #joyBase { position:absolute; width:116px; height:116px; border-radius:50%; border:2px solid rgba(200,180,120,.3);
-    background:rgba(10,10,16,.3); display:none; pointer-events:none; }
+    background:rgba(10,10,16,.3); pointer-events:none; opacity:.4; }
+  #joyBase.on { opacity:.95; border-color:rgba(230,200,130,.6); }
   #joyKnob { position:absolute; left:50%; top:50%; width:48px; height:48px; margin:-24px 0 0 -24px; border-radius:50%;
     background:rgba(200,176,110,.45); border:1.5px solid rgba(230,200,130,.7); }
+  #lookBase { position:absolute; right:22px; bottom:26px; width:136px; height:136px; border-radius:50%;
+    border:2px solid rgba(170,170,210,.35); background:rgba(10,10,18,.35); pointer-events:auto; touch-action:none; opacity:.75; }
+  #lookBase.on { opacity:1; border-color:rgba(200,195,245,.7); }
+  #lookKnob { position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%;
+    background:rgba(150,148,200,.4); border:1.5px solid rgba(200,195,240,.6); }
   .ovClose { display:none; position:absolute; top:8px; right:10px; width:36px; height:36px; border-radius:6px;
     background:#2a2418; border:1px solid #6a5a38; color:#d8cba0; font-size:18px;
     align-items:center; justify-content:center; cursor:pointer; }
   body.touchmode .ovClose { display:flex; }
   body.touchmode #consums { display:none; }
-  body.touchmode #hotbar { pointer-events:auto; }
-  body.touchmode #minimap { width:110px; height:110px; }
-  body.touchmode #bossWrap { width:300px; }
-  body.touchmode #log { bottom:auto; top:64px; left:74px; font-size:11px; }
-  body.touchmode .barWrap { left:74px; }
-  body.touchmode #hpWrap { width:190px; }
-  body.touchmode #stWrap { width:160px; }
-  body.touchmode #hpText { left:80px; }
-  body.touchmode #buffs { left:74px; }
+  body.touchmode #hotbar { pointer-events:auto; bottom:auto; top:10px; }
+  body.touchmode #minimap { width:92px; height:92px; top:8px; right:8px; }
+  body.touchmode #bossWrap { width:300px; top:86px; }
+  body.touchmode #hpWrap { bottom:auto; top:68px; left:14px; width:170px; }
+  body.touchmode #stWrap { bottom:auto; top:90px; left:14px; width:150px; }
+  body.touchmode #hpText { bottom:auto; top:69px; left:20px; }
+  body.touchmode #buffs { bottom:auto; top:110px; left:14px; }
+  body.touchmode #log { bottom:auto; top:130px; left:80px; font-size:11px; }
   @media (max-width:900px) {
     .screen h1 { font-size:32px; letter-spacing:3px; }
     .screen h2 { font-size:12px; letter-spacing:5px; margin-bottom:14px; }
@@ -237,6 +243,7 @@
 
 <div id="mctl">
   <div id="joyBase"><div id="joyKnob"></div></div>
+  <div id="lookBase"><div id="lookKnob"></div></div>
   <div class="mbtn" id="mbR"><span class="mico">⚔</span><span class="mlab">오른손</span></div>
   <div class="mbtn" id="mbL"><span class="mico">🤜</span><span class="mlab">왼손</span></div>
   <div class="mbtn" id="mbBlock"><span class="mico">🛡</span><span class="mlab">막기</span></div>
@@ -1934,6 +1941,11 @@ function updatePlayer(dt){
     if(lp>=0.4&&!leftAtk.hitDone){leftAtk.hitDone=true;punchHit();}
     if(lp>=1)leftAtk.active=false;
   }
+  // 모바일 회전 스틱
+  if(lookS.id!==null){
+    yaw-=lookS.x*3.0*dt;
+    pitch=clamp(pitch-lookS.y*2.2*dt,-1.45,1.45);
+  }
   // 카메라
   bobY=movin&&player.onGround?Math.abs(Math.sin(walkT))*0.045:lerp(bobY,0,dt*8);
   let sx=0,sy=0;
@@ -2400,28 +2412,35 @@ const IS_TOUCH=(window.matchMedia&&matchMedia('(pointer:coarse)').matches)
   ||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent)) // 아이패드 데스크톱 모드
   ||/[?&]touch/.test(location.search);
 const joy={id:null,ox:0,oy:0,x:0,z:0,mag:0};
+const lookS={id:null,x:0,y:0,cx:0,cy:0}; // 우하단 회전 스틱
 $('ovCloseInv').addEventListener('click',closeOverlay);
 $('ovCloseShop').addEventListener('click',closeOverlay);
 if(IS_TOUCH){
   document.body.classList.add('touchmode');
   $('menu').querySelector('.controls').innerHTML=
-    '📱 <b>왼쪽 화면</b> 드래그 — 이동 (가장자리 너머로 밀면 질주) · <b>오른쪽 화면</b> 드래그 — 시점<br>'+
-    '<b>⚔ 오른손</b> 무기 공격 (활: 길게 눌렀다 놓기) · <b>🤜 왼손</b> 펀치 / 횃불 던지기<br>'+
-    '<b>🛡 막기</b> 누르고 유지 · <b>✋ 잡기</b> 상자·줍기·계단·상인 · <b>⚡</b> 특수 공격 · <b>🔥</b> 횃불 들기<br>'+
-    '<b>🎒</b> 가방 · 하단 핫바 탭 — 무기 교체<br><br>'+
+    '📱 <b>왼쪽 아래 스틱</b> — 이동 (끝까지 밀면 질주) · <b>오른쪽 아래 스틱</b> — 시점 회전 (빈 화면 드래그도 가능)<br>'+
+    '스틱 위 <b>⚔ 오른손</b> 무기 공격 (활: 길게 눌렀다 놓기) · <b>🤜 왼손</b> 펀치 / 횃불 던지기<br>'+
+    '<b>🛡 막기</b> 누르고 유지 · <b>⤴ 점프</b> · <b>✋ 잡기</b> 상자·줍기·계단·상인 · <b>⚡</b> 특수 공격<br>'+
+    '<b>상단 슬롯</b> — 무기 탭하여 교체, 🔥 횃불 · 🧪 물약 · 🩹 붕대는 탭하여 사용 · <b>🎒</b> 가방 (왼쪽)<br><br>'+
     '어둠 속에서 보물을 찾고, 수호자를 쓰러뜨리거나 룬 퍼즐을 풀어 더 깊이 내려가라.<br>'+
     '횃불 없이는 한 치 앞도 보이지 않는다. 죽음은 영원하다.';
   const look={id:null,px:0,py:0};
   const JR=44; // 조이스틱 최대 반경(px)
   const base=$('joyBase'),knob=$('joyKnob');
-  function joyHide(){base.style.display='none';joy.id=null;joy.x=0;joy.z=0;joy.mag=0;}
+  function joyRest(){ // 휴면 시 좌하단 고정 위치로 복귀
+    base.classList.remove('on');knob.style.transform='translate(0,0)';
+    base.style.left='36px';base.style.top=(innerHeight-152)+'px';
+    joy.id=null;joy.x=0;joy.z=0;joy.mag=0;
+  }
+  joyRest();
+  addEventListener('resize',()=>{if(joy.id===null)joyRest();});
   renderer.domElement.addEventListener('touchstart',e=>{
     e.preventDefault();
     if(state!=='play')return;
     for(const t of Array.from(e.changedTouches)){
       if(t.clientX<innerWidth*0.45&&joy.id===null){
         joy.id=t.identifier;joy.ox=t.clientX;joy.oy=t.clientY;joy.x=0;joy.z=0;joy.mag=0;
-        base.style.display='block';base.style.left=(t.clientX-58)+'px';base.style.top=(t.clientY-58)+'px';
+        base.classList.add('on');base.style.left=(t.clientX-58)+'px';base.style.top=(t.clientY-58)+'px';
         knob.style.transform='translate(0,0)';
       }else if(look.id===null){
         look.id=t.identifier;look.px=t.clientX;look.py=t.clientY;
@@ -2447,12 +2466,43 @@ if(IS_TOUCH){
   },{passive:false});
   const tEnd=e=>{
     for(const t of Array.from(e.changedTouches)){
-      if(t.identifier===joy.id)joyHide();
+      if(t.identifier===joy.id)joyRest();
       else if(t.identifier===look.id)look.id=null;
     }
   };
   renderer.domElement.addEventListener('touchend',tEnd);
   renderer.domElement.addEventListener('touchcancel',tEnd);
+  // 우하단 회전 스틱 — 기울인 만큼 시점이 회전한다
+  const lbase=$('lookBase'),lknob=$('lookKnob');
+  const LR=46;
+  function lookMove(t){
+    let dx=t.clientX-lookS.cx,dy=t.clientY-lookS.cy;
+    const d=Math.hypot(dx,dy);
+    if(d>LR){dx*=LR/d;dy*=LR/d;}
+    lknob.style.transform='translate('+dx+'px,'+dy+'px)';
+    lookS.x=dx/LR;lookS.y=dy/LR;
+  }
+  lbase.addEventListener('touchstart',e=>{
+    e.preventDefault();e.stopPropagation();
+    if(lookS.id!==null)return;
+    const t=e.changedTouches[0],r=lbase.getBoundingClientRect();
+    lookS.id=t.identifier;lookS.cx=r.left+r.width/2;lookS.cy=r.top+r.height/2;
+    lbase.classList.add('on');
+    lookMove(t);
+  },{passive:false});
+  lbase.addEventListener('touchmove',e=>{
+    e.preventDefault();e.stopPropagation();
+    for(const t of Array.from(e.changedTouches))if(t.identifier===lookS.id)lookMove(t);
+  },{passive:false});
+  const lEnd=e=>{
+    e.preventDefault();e.stopPropagation();
+    for(const t of Array.from(e.changedTouches))if(t.identifier===lookS.id){
+      lookS.id=null;lookS.x=0;lookS.y=0;
+      lknob.style.transform='translate(0,0)';lbase.classList.remove('on');
+    }
+  };
+  lbase.addEventListener('touchend',lEnd,{passive:false});
+  lbase.addEventListener('touchcancel',lEnd,{passive:false});
   function bindBtn(id,down,up){
     const el=$(id);
     el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();el.classList.add('on');down&&down();},{passive:false});
